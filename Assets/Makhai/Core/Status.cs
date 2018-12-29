@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Makhai.ComplexStats;
+using System;
 using System.Collections.Generic;
 
 namespace Makhai.Core
@@ -6,20 +7,17 @@ namespace Makhai.Core
 	[Serializable]
 	public class Status : IEntityEventUser
 	{
+		#region STATIC_VARS
+
+		public const int STACK_DECAY_RATE_COMMUNAL = -1;
+		public const int STACK_DECAY_RATE_NONE = 0;
+		public const int STACK_DECAY_RATE_SERIAL = 1;
+		#endregion
+
+		#region INSTANCE_VARS
 		public string Name { get; private set; }
 
-		public float InitialDuration { get; private set; }
-		public float RemainingDuration { get; set; }
-
-		/// <summary>
-		/// Percentage of remaining time / initial set time.
-		/// </summary>
-		public float Progress { get { return RemainingDuration / InitialDuration; } }
-
-		/// <summary>
-		/// Has the remaining time reached zero?
-		/// </summary>
-		public bool IsCompleted { get { return RemainingDuration <= 0f; } }
+		public Timer Duration { get; private set; }
 
 		private int stackCount;
 		public int Stacks
@@ -35,20 +33,34 @@ namespace Makhai.Core
 			}
 		}
 
-		public int StacksMax { get; set; }
+		public int StacksMax { get; protected set; }
+
+		/// <summary>
+		/// Decrements Stacks when the duration is completed. If negative, Stacks will be set
+		/// to zero rather than decaying.
+		/// </summary>
+		public int StackDecayRate { get; protected set; }
 
 		/// <summary>
 		/// Collection of statuses that define this status's behaviour.
 		/// </summary>
 		private List<StatusComponent> components;
+		#endregion
 
-		public Status(float duration, params StatusComponent[] components)
+		#region INSTANCE_METHODS
+
+		public Status(string name, float duration, int stacksMax, int stackDecayRate, params StatusComponent[] components)
 		{
-			InitialDuration = duration;
-			RemainingDuration = InitialDuration;
+			if (name == null || name == "")
+				throw new ArgumentNullException ("Status name cannot be null or empty.");
+
+			Name = name;
+
+			Duration = new Timer (duration);
 
 			stackCount = 1;
-			StacksMax = 1;
+			StacksMax = stacksMax;
+			StackDecayRate = stackDecayRate;
 
 			this.components = new List<StatusComponent> (components);
 		}
@@ -67,7 +79,17 @@ namespace Makhai.Core
 
 		public void OnUpdate(Entity subject, float dTime)
 		{
-			RemainingDuration -= dTime;
+			if (Duration.Tick(dTime))
+			{
+				//if SDS is negative, set stacks to zero
+				Stacks -= StackDecayRate < 0 ? Stacks : StackDecayRate;
+				if (Stacks > 0)
+				{
+					Duration.Reset ();
+				}
+			}
+
+			//update components
 			for (int i = 0; i < components.Count; i++)
 			{
 				components[i].OnUpdate (subject, dTime);
@@ -120,5 +142,28 @@ namespace Makhai.Core
 			for (int i = 0; i < components.Count; i++)
 				components[i].OnShieldStartRecharge (subject);
 		}
+
+		public void OnStatusAdded(Status s)
+		{
+			for (int i = 0; i < components.Count; i++)
+				components[i].OnStatusAdded (s);
+		}
+
+		public void OnStatusRemoved(Status s)
+		{
+			for (int i = 0; i < components.Count; i++)
+				components[i].OnStatusRemoved (s);
+		}
+
+		public override bool Equals(object obj)
+		{
+			return Name.Equals (((Status)obj).Name);
+		}
+
+		public override int GetHashCode()
+		{
+			return Name.GetHashCode ();
+		}
+		#endregion
 	}
 }

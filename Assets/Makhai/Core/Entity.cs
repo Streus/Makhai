@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Makhai.ComplexStats;
+using System;
 using System.Collections.Generic;
 
 namespace Makhai.Core
@@ -12,7 +13,7 @@ namespace Makhai.Core
 		#endregion
 
 		#region INSTANCE_VARS
-		private HashSet<Status> statuses;
+		private Dictionary<string, Status> statuses;
 
 		private float combatTimer;
 		public bool InCombat
@@ -57,24 +58,39 @@ namespace Makhai.Core
 		public BasicEvent shieldStartRecharge;
 		public BasicEvent shieldRecharged;
 		public BasicEvent death;
+		public StatusEvent statusAdded;
+		public StatusEvent statusRemoved;
 		#endregion
 		#endregion
 
 		#region STATIC_METHODS
 
-		public static bool DealDamage(Entity victim, Entity attacker, float damage, DamageFlags flags = DamageFlags.None)
+		/// <summary>
+		/// Deals damage to the indicated victim from the indicated attacker.
+		/// </summary>
+		/// <param name="victim"></param>
+		/// <param name="attacker"></param>
+		/// <param name="damage"></param>
+		/// <param name="flags"></param>
+		/// <returns></returns>
+		public static CombatSnapshot DealDamage(Entity victim, Entity attacker, float damage, DamageFlags flags = DamageFlags.None)
 		{
-			if (damage <= 0f)
-				return false;
-
-			if (victim == null)
-				throw new NullReferenceException ("Cannot deal damage to null victim");
-
 			CombatSnapshot.Builder snapshotBuilder = new CombatSnapshot.Builder ()
 			{
 				Victim = victim,
 				Attacker = attacker
 			};
+
+			if (damage <= 0f)
+			{
+				snapshotBuilder.HealthDamage = 0f;
+				snapshotBuilder.ShieldDamage = 0f;
+				snapshotBuilder.VictimDied = false;
+				return snapshotBuilder.Build ();
+			}
+
+			if (victim == null)
+				throw new NullReferenceException ("Cannot deal damage to null victim");
 
 			victim.combatTimer = COMBAT_TIMER_MAX;
 			if (attacker != null)
@@ -119,11 +135,14 @@ namespace Makhai.Core
 				}
 			}
 
-			//TODO some event calls
 			snapshotBuilder.VictimDied = victimDied;
 
+			CombatSnapshot snapshot = snapshotBuilder.Build ();
 
-			return victimDied;
+			victim.OnDamageTaken (snapshot);
+			attacker?.OnDamageDealt (snapshot);
+
+			return snapshot;
 		}
 		#endregion
 
@@ -131,31 +150,124 @@ namespace Makhai.Core
 
 		public Entity()
 		{
-			statuses = new HashSet<Status> ();
+			statuses = new Dictionary<string, Status> ();
 		}
 
 		#region STATUS_HANDLING
 
+		public void AddStatus(Status s)
+		{
+			if (s == null)
+				throw new ArgumentNullException ("Cannot add null status.");
+
+			Status existing;
+			if (statuses.TryGetValue(s.Name, out existing))
+			{
+				existing.Stacks++;
+			}
+			else
+			{
+				statuses.Add (s.Name, s);
+				s.OnApply (this);
+				statusAdded?.Invoke (s);
+			}
+		}
+
+		public bool RemoveStatus(Status s)
+		{
+			return RemoveStatus (s.Name);
+		}
+
+		public bool RemoveStatus(string name)
+		{
+			if (name == null || name == "")
+				throw new ArgumentNullException ("Status name cannot be null or empty.");
+
+			Status status;
+			if (statuses.TryGetValue (name, out status))
+			{
+				statuses.Remove (name);
+				statusRemoved?.Invoke (status);
+				return true;
+			}
+
+			return false;
+		}
+
+		public void ClearStatuses()
+		{
+			foreach (Status s in statuses.Values)
+			{
+				s.Duration.Complete ();
+				s.OnRevert (this);
+
+				statusRemoved?.Invoke (s);
+			}
+
+			statuses.Clear ();
+		}
+
+		public bool HasStatus(Status s)
+		{
+			return HasStatus (s.Name);
+		}
+
+		public bool HasStatus(string name)
+		{
+			return statuses.ContainsKey (name);
+		}
+
+		public Dictionary<string, Status>.ValueCollection GetStatusList()
+		{
+			return statuses.Values;
+		}
 		#endregion
 
 		#region EVENTS
 
 		public void OnUpdate(Entity subject, float dTime)
 		{
-			List<Status> expiredStatuses = new List<Status> ();
-			foreach (Status s in statuses)
+			if (ShieldRegenDelay > 0)
+			{
+				//decrement delay timer
+				ShieldRegenDelay -= dTime;
+				if (ShieldRegenDelay <= 0)
+					OnShieldStartRecharge (this);
+			}
+			else
+			{
+				ShieldRegenDelay = 0;
+				if (Shield < ShieldMax.GetValue())
+				{
+					//add to shield up to ShieldMax
+					Shield += ShieldRegen.GetValue () * dTime;
+					if (Shield >= ShieldMax.GetValue())
+					{
+						Shield = ShieldMax.GetValue ();
+						OnShieldRecharged (this);
+					}
+				}
+			}
+
+			//update all statuses, taking note of those that complete their durations
+			Queue<Status> expiredStatuses = new Queue<Status> ();
+			foreach (Status s in statuses.Values)
 			{
 				s.OnUpdate (subject, dTime);
-				if (s.IsCompleted)
-					expiredStatuses.Add (s);
+				if (s.Duration.IsCompleted())
+					expiredStatuses.Enqueue (s);
 			}
+
+			//remove all statuses that have competed their durations
+			while (expiredStatuses.Count > 0)
+				RemoveStatus (expiredStatuses.Dequeue ());
 
 			update?.Invoke (this, dTime);
 		}
 
 		public void OnDamageTaken(CombatSnapshot snapshot)
 		{
-			foreach (Status s in statuses)
+			foreach (Status s in statuses.Values)
 				s.OnDamageTaken (snapshot);
 
 			damageTaken?.Invoke (snapshot);
@@ -163,7 +275,7 @@ namespace Makhai.Core
 
 		public void OnDamageDealt(CombatSnapshot snapshot)
 		{
-			foreach (Status s in statuses)
+			foreach (Status s in statuses.Values)
 				s.OnDamageDealt (snapshot);
 
 			damageDealt?.Invoke (snapshot);
@@ -171,7 +283,7 @@ namespace Makhai.Core
 
 		public void OnHealed(Entity subject, float amount)
 		{
-			foreach (Status s in statuses)
+			foreach (Status s in statuses.Values)
 				s.OnHealed (subject, amount);
 
 			healed?.Invoke (subject, amount);
@@ -179,7 +291,7 @@ namespace Makhai.Core
 
 		public void OnShieldDepleted(Entity subject)
 		{
-			foreach (Status s in statuses)
+			foreach (Status s in statuses.Values)
 				s.OnShieldDepleted (subject);
 
 			shieldDepleted?.Invoke (subject);
@@ -187,7 +299,7 @@ namespace Makhai.Core
 
 		public void OnShieldStartRecharge(Entity subject)
 		{
-			foreach (Status s in statuses)
+			foreach (Status s in statuses.Values)
 				s.OnShieldStartRecharge (subject);
 
 			shieldStartRecharge?.Invoke (subject);
@@ -195,7 +307,7 @@ namespace Makhai.Core
 
 		public void OnShieldRecharged(Entity subject)
 		{
-			foreach (Status s in statuses)
+			foreach (Status s in statuses.Values)
 				s.OnShieldRecharged (subject);
 
 			shieldRecharged?.Invoke (subject);
@@ -204,7 +316,7 @@ namespace Makhai.Core
 		public bool OnDeath(Entity subject)
 		{
 			bool continueDeath = true;
-			foreach (Status s in statuses)
+			foreach (Status s in statuses.Values)
 			{
 				if (!s.OnDeath (subject))
 					continueDeath = false;
@@ -217,6 +329,22 @@ namespace Makhai.Core
 			}
 			return false;
 		}
+
+		public void OnStatusAdded(Status newStatus)
+		{
+			foreach (Status s in statuses.Values)
+				s.OnStatusAdded (s);
+
+			statusAdded?.Invoke (newStatus);
+		}
+
+		public void OnStatusRemoved(Status newStatus)
+		{
+			foreach (Status s in statuses.Values)
+				s.OnStatusRemoved (newStatus);
+
+			statusRemoved?.Invoke (newStatus);
+		}
 		#endregion
 		#endregion
 
@@ -225,6 +353,7 @@ namespace Makhai.Core
 		public delegate void BasicEvent(Entity subject);
 		public delegate void ValueUpdateEvent(Entity subject, float amount);
 		public delegate void DamageEvent(CombatSnapshot snapshot);
+		public delegate void StatusEvent(Status s);
 		#endregion
 	}
 }

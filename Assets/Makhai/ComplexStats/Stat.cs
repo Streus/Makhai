@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Makhai.Core
+namespace Makhai.ComplexStats
 {
 	/// <summary>
 	/// Represents a compound value of the form (B * M) + A.

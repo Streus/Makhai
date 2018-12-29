@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Makhai.Core
+namespace Makhai.ComplexStats
 {
 	/// <summary>
 	/// Binds a Stat value between a min and max value
@@ -56,7 +56,7 @@ namespace Makhai.Core
 
 		public override string ToString()
 		{
-			return "(" + Base + " + " + Additive + ") * " + Multiplier + " { " + Min + " <= V <= " + Max + "}" + " = " + GetValue ();
+			return "(" + Base + " + " + Additive + ") * " + Multiplier + " { " + Min + " <= V <= " + Max + " }" + " = " + GetValue ();
 		}
 
 		public override object Clone()

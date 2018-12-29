@@ -13,5 +13,8 @@
 		void OnShieldRecharged(Entity subject);
 
 		bool OnDeath(Entity subject);
+
+		void OnStatusAdded(Status s);
+		void OnStatusRemoved(Status s);
 	}
 }

@@ -56,5 +56,15 @@ namespace Makhai.Core
 		{
 
 		}
+
+		public virtual void OnStatusAdded(Status s)
+		{
+
+		}
+
+		public virtual void OnStatusRemoved(Status s)
+		{
+
+		}
 	}
 }
