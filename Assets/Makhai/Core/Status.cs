@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace Makhai.Core
 {
 	[Serializable]
-	public class Status : IEntityEventUser
+	public class Status : IEntityEventUser, INamedItem
 	{
 		#region STATIC_VARS
 
