@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace Makhai.Core
 {
@@ -11,6 +13,9 @@ namespace Makhai.Core
 
 		[SerializeField]
 		private Entity self = new Entity ();
+
+		[SerializeField]
+		protected List<Ability> abilityList;
 		#endregion
 
 		#region INSTANCE_METHODS
@@ -18,6 +23,28 @@ namespace Makhai.Core
 		private void Update()
 		{
 			self.OnUpdate (null, Time.deltaTime);
+		}
+
+		public bool UseAbility(int index)
+		{
+			return abilityList[index].Use(this);
+		}
+
+		public bool UseAbility(string name)
+		{
+			return UseAbility ((Ability other) => { return other.Name == name; });
+		}
+
+		public bool UseAbility(SearchPredicate searchMethod)
+		{
+			foreach (Ability a in abilityList)
+			{
+				if (a != null && searchMethod (a))
+				{
+					return a.Use (this);
+				}
+			}
+			throw new ArgumentException ("Failed to find ability matching predicate");
 		}
 
 		/// <summary>
@@ -37,6 +64,11 @@ namespace Makhai.Core
 		{
 			return Vector3.zero;
 		}
+		#endregion
+
+		#region INTERNAL_TYPES
+
+		public delegate bool SearchPredicate(Ability other);
 		#endregion
 	}
 }
