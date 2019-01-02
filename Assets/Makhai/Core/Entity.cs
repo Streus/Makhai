@@ -29,9 +29,9 @@ namespace Makhai.Core
 
 		#region STATS
 
-		public float Health { get; private set; }
-		public BoundedStat HealthMax { get; set; }
-		public Stat HealthRegen { get; set; }
+		public float Health { get; private set; } = 0f;
+		public BoundedStat HealthMax { get; set; } = new BoundedStat (new Stat (), 0f);
+		public Stat HealthRegen { get; set; } = new Stat ();
 
 		private int invincibleCount;
 		public bool Invincible
@@ -39,13 +39,13 @@ namespace Makhai.Core
 			get { return invincibleCount > 0; }
 		}
 
-		public BoundedStat Movespeed { get; set; }
+		public BoundedStat Movespeed { get; set; } = new BoundedStat(new Stat(), 0f);
 
-		public float Shield { get; private set; }
-		public BoundedStat ShieldMax { get; set; }
-		public Stat ShieldRegen { get; set; }
-		public float ShieldRegenDelay { get; set; }
-		public BoundedStat ShieldRegenDelayMax { get; set; }
+		public float Shield { get; private set; } = 0f;
+		public BoundedStat ShieldMax { get; set; } = new BoundedStat (new Stat (), 0f);
+		public Stat ShieldRegen { get; set; } = new Stat ();
+		public float ShieldRegenDelay { get; set; } = 0f;
+		public BoundedStat ShieldRegenDelayMax { get; set; } = new BoundedStat (new Stat (), 0f);
 		#endregion
 
 		#region EVENTS
@@ -151,6 +151,9 @@ namespace Makhai.Core
 		public Entity()
 		{
 			statuses = new Dictionary<string, Status> ();
+			faction = Faction.Neutral;
+			Health = HealthMax.GetValue ();
+			Shield = ShieldMax.GetValue ();
 		}
 
 		#region STATUS_HANDLING
