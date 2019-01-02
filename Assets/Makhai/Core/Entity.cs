@@ -253,7 +253,7 @@ namespace Makhai.Core
 			Queue<Status> expiredStatuses = new Queue<Status> ();
 			foreach (Status s in statuses.Values)
 			{
-				s.OnUpdate (subject, dTime);
+				s.OnUpdate (this, dTime);
 				if (s.Duration.IsCompleted())
 					expiredStatuses.Enqueue (s);
 			}
