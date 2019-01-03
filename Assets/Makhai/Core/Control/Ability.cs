@@ -1,7 +1,7 @@
 ﻿using Makhai.ComplexStats;
 using System;
 
-namespace Makhai.Core
+namespace Makhai.Core.Control
 {
 	/// <summary>
 	/// Invokeable behavior for use with an Entity.

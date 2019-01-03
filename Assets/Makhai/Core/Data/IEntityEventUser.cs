@@ -1,4 +1,4 @@
-﻿namespace Makhai.Core
+﻿namespace Makhai.Core.Data
 {
 	interface IEntityEventUser
 	{

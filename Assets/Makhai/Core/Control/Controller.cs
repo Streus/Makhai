@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Makhai.Core
+namespace Makhai.Core.Control
 {
 	/// <summary>
 	/// Base class for AI/Player control managers.

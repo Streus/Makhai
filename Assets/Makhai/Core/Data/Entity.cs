@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Makhai.Core
+namespace Makhai.Core.Data
 {
 	[Serializable]
     public class Entity : IEntityEventUser

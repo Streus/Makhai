@@ -1,4 +1,4 @@
-﻿namespace Makhai.Core
+﻿namespace Makhai.Core.Data
 {
 	/// <summary>
 	/// Represents a damage interaction between an attacker and a victim.

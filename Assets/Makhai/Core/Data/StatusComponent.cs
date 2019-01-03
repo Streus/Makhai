@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Makhai.Core
+namespace Makhai.Core.Data
 {
 	[Serializable]
 	public class StatusComponent : IEntityEventUser
