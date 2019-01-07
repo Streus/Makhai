@@ -15,30 +15,60 @@ namespace Makhai.Core.Bullets
 		[SerializeField]
 		private BulletBehavior behavior;
 
+		/// <summary>
+		/// The Entity that created this bullet.
+		/// </summary>
+		public Entity Source { get; private set; }
+
 		[SerializeField]
 		private Timer lifetime;
+
+		/// <summary>
+		/// What factions will this bullet deal damage to?
+		/// </summary>
+		public Faction HitMask { get; set; }
 		#endregion
 
 		#region STATIC_METHODS
 
 		public static Bullet Create(BulletBehavior behavior, Entity source, Vector3 position, Quaternion rotation)
 		{
-			//TODO maybe a builder instead???
+			GameObject inst = Instantiate (behavior.GetPrefab (), position, rotation);
+			Bullet bullet = inst.GetComponent<Bullet> ();
+			bullet.behavior = behavior;
+			bullet.Source = source;
+			bullet.lifetime = new Timer (behavior.GetLifetimeDuration ());
+			bullet.HitMask = ~source.Affiliation;
+
+			return bullet;
+		}
+
+		public static Bullet Create(BulletBehavior behavior, Entity source, Transform parent)
+		{
+			GameObject inst = Instantiate (behavior.GetPrefab (), parent, false);
+			Bullet bullet = inst.GetComponent<Bullet> ();
+			bullet.behavior = behavior;
+			bullet.Source = source;
+			bullet.lifetime = new Timer (behavior.GetLifetimeDuration ());
+			bullet.HitMask = ~source.Affiliation;
+
+			return bullet;
 		}
 		#endregion
 
 		#region INSTANCE_METHODS
 
-		public Bullet()
+		private Bullet()
 		{
 			behavior = null;
-			lifetime = new Timer (float.PositiveInfinity);
+			Source = null;
+			lifetime = null;
 		}
 
 		#region EVENTS
 		private void Awake()
 		{
-			lifetime.Reset ();
+			
 		}
 
 		private void Start()
@@ -46,10 +76,23 @@ namespace Makhai.Core.Bullets
 			behavior?.OnStart (this);
 		}
 
+		private void Reset()
+		{
+			behavior = null;
+			lifetime?.Reset ();
+		}
+
 		private void Update()
 		{
-			lifetime.Tick (Time.deltaTime);
-			behavior?.OnUpdate (this);
+			if (lifetime.IsCompleted ())
+			{
+				OnDeath ();
+			}
+			else
+			{
+				behavior?.OnUpdate (this);
+				lifetime.Tick (Time.deltaTime);
+			}
 		}
 
 		private void FixedUpdate()
@@ -57,9 +100,44 @@ namespace Makhai.Core.Bullets
 			behavior?.OnFixedUpdate (this);
 		}
 
-		private bool OnHit(Collider other)
+		private void OnCollisionEnter(Collision collision)
 		{
-			return (behavior?.OnHit (this, other)).Value;
+			if (!collision.collider.isTrigger)
+			{
+				Entity other = collision.gameObject.GetComponent<Entity> ();
+				if ((HitMask & other.Affiliation) != 0)
+				{
+					OnHit (collision, other);
+				}
+			}
+		}
+
+		private void OnHit(Collision collision, Entity victim = null)
+		{
+			if ((behavior?.OnHit (this, collision, victim)).Value)
+			{
+				OnDeath ();
+			}
+		}
+
+		private void OnCollisionEnter2D(Collision2D collision)
+		{
+			if (!collision.collider.isTrigger)
+			{
+				Entity other = collision.gameObject.GetComponent<Entity> ();
+				if ((HitMask & other.Affiliation) != 0)
+				{
+					OnHit2D (collision, other);
+				}
+			}
+		}
+
+		private void OnHit2D(Collision2D collision, Entity victim = null)
+		{
+			if ((behavior?.OnHit2D (this, collision, victim)).Value)
+			{
+				OnDeath ();
+			}
 		}
 
 		private void OnDeath()
