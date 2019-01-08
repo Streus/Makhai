@@ -1,4 +1,4 @@
-﻿using Makhai.Core;
+﻿using Makhai.Core.Control;
 using UnityEngine;
 
 namespace Example
