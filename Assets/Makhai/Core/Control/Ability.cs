@@ -1,5 +1,7 @@
 ﻿using Makhai.ComplexStats;
 using System;
+using System.Collections;
+using UnityEngine;
 
 namespace Makhai.Core.Control
 {
@@ -17,7 +19,7 @@ namespace Makhai.Core.Control
 		public string Name { get; private set; }
 
 		/// <summary>
-		/// Ability is unusable if a cooldown is in progress.
+		/// Ability is not usable if a cooldown is in progress.
 		/// </summary>
 		public Timer Cooldown { get; private set; }
 
@@ -39,7 +41,7 @@ namespace Makhai.Core.Control
 		public bool Active
 		{
 			get { return inactiveCount <= 0; }
-			set { inactiveCount += value ? -1 : 1; }
+			set { inactiveCount += value ? -1 : 1; if (inactiveCount < 0) inactiveCount = 0; }
 		}
 
 		private int unavailableCount;
@@ -49,10 +51,15 @@ namespace Makhai.Core.Control
 		public bool Available
 		{
 			get { return unavailableCount <= 0; }
-			set { unavailableCount += value ? -1 : 1; }
+			set { unavailableCount += value ? -1 : 1; if (unavailableCount < 0) unavailableCount = 0; }
 		}
 
-		public event UseCallback used;
+		public bool InUse { get => useRoutine != null; }
+
+		public event UseStartCallback startUse;
+		public event UseEndCallback endUse;
+
+		private IEnumerator useRoutine;
 		#endregion
 
 		#region INSTANCE_METHODS
@@ -62,6 +69,8 @@ namespace Makhai.Core.Control
 			Name = name;
 			Cooldown = new Timer (cooldownMax);
 			ChargesMax = chargesMax;
+
+			useRoutine = null;
 		}
 
 		public bool IsReady()
@@ -69,10 +78,28 @@ namespace Makhai.Core.Control
 			return Active && Available && (Cooldown.IsCompleted () || Charges > 0);
 		}
 
-		protected abstract bool Invoke(Controller subject);
+		/// <summary>
+		/// Called when invocation starts. Returns whether invocation should continue.
+		/// </summary>
+		/// <param name="subject">The controller on which to operate</param>
+		/// <returns>Should invocation continue?</returns>
+		protected abstract bool InvokeStart(Controller subject);
 
 		/// <summary>
-		/// Invokes the behavior of this ability
+		/// Main behavior loop of abilities that do not terminate in a single update (in InvokeStart).
+		/// </summary>
+		/// <param name="subject">The controller on which to operate</param>
+		/// <returns></returns>
+		protected virtual IEnumerator InvokeContinue(Controller subject) { yield break; }
+
+		/// <summary>
+		/// Called when InvokeContinue ends.
+		/// </summary>
+		/// <param name="subject">The controller on which to operate</param>
+		protected virtual void InvokeEnd(Controller subject) { }
+
+		/// <summary>
+		/// Starts execution of the behavior of this ability.
 		/// </summary>
 		/// <param name="subject">The AI/Player data to use for invocation.</param>
 		/// <returns></returns>
@@ -80,8 +107,8 @@ namespace Makhai.Core.Control
 		{
 			if (IsReady())
 			{
-				bool success = Invoke (subject);
-				OnUse (subject, success);
+				bool success = InvokeStart (subject);
+				OnUseStart (subject, success);
 
 				if (Charges > 0)
 				{
@@ -92,33 +119,70 @@ namespace Makhai.Core.Control
 					Cooldown.Reset ();
 				}
 
-				return success;
+				//init continuing use behavior
+				if (success)
+				{
+					useRoutine = InvokeContinue(subject);
+				}
+
+				return true;
 			}
 			return false;
 		}
 
 		#region EVENTS
 
-		public void OnUpdate(float dTime)
+		public void OnUpdate(Controller subject, float dTime)
 		{
-			if (Active && !Cooldown.IsCompleted())
+			//currently being used
+			if (useRoutine != null)
 			{
-				if (Cooldown.Tick (dTime))
+				bool hasNext;
+				try
 				{
-					Cooldown.Complete ();
-					if (Charges < ChargesMax)
+					hasNext = useRoutine.MoveNext();
+				}
+				catch(Exception e)
+				{
+					Debug.LogException(e);
+					hasNext = false;
+				}
+
+				if(!hasNext)
+				{
+					//use finished or duration completed
+					useRoutine = null;
+					OnUseEnd(subject);
+				}
+			}
+			//not being used, either waiting to be used or cooling down
+			else
+			{
+				if (Active && !Cooldown.IsCompleted())
+				{
+					if (Cooldown.Tick(dTime))
 					{
-						Charges++;
-						if(Charges < ChargesMax)
-							Cooldown.Reset ();
+						//finished cooldown
+						Cooldown.Complete();
+						if (Charges < ChargesMax)
+						{
+							Charges++;
+							if (Charges < ChargesMax)
+								Cooldown.Reset();
+						}
 					}
 				}
 			}
 		}
 
-		protected void OnUse(Controller subject, bool success)
+		protected void OnUseStart(Controller subject, bool success)
 		{
-			used?.Invoke (subject, success);
+			startUse?.Invoke (subject, success);
+		}
+
+		protected void OnUseEnd(Controller subject)
+		{
+			endUse?.Invoke(subject);
 		}
 		#endregion
 
@@ -140,7 +204,8 @@ namespace Makhai.Core.Control
 
 		#region INTERNAL_TYPES
 
-		public delegate void UseCallback(Controller subject, bool success);
+		public delegate void UseStartCallback(Controller subject, bool success);
+		public delegate void UseEndCallback(Controller subject);
 		#endregion
 	}
 }

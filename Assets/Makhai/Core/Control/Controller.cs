@@ -24,6 +24,10 @@ namespace Makhai.Core.Control
 		private void Update()
 		{
 			self.OnUpdate (null, Time.deltaTime);
+			for(int i = 0; i < abilityList.Count; i++)
+			{
+				abilityList[i].OnUpdate(this, Time.deltaTime);
+			}
 		}
 
 		public bool UseAbility(int index)
