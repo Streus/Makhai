@@ -12,14 +12,23 @@ namespace Makhai.Core.Control
 	{
 		#region INSTANCE_VARS
 
-		[SerializeField]
-		private Entity self = new Entity ();
+		[SerializeField, HideInInspector]
+		private Entity self;
 
 		[SerializeField]
-		protected List<Ability> abilityList;
+		protected List<Ability> abilityList = new List<Ability>();
 		#endregion
 
 		#region INSTANCE_METHODS
+
+		private void Start()
+		{
+			self = GetComponent<Entity>();
+			if(self == null)
+			{
+				Debug.LogWarning("Failed to find Entity for Controller on \"" + gameObject.name + "\"");
+			}
+		}
 
 		private void Update()
 		{

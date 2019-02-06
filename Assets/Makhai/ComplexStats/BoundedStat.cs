@@ -1,4 +1,5 @@
 ﻿using System;
+using UnityEngine;
 
 namespace Makhai.ComplexStats
 {
@@ -11,12 +12,16 @@ namespace Makhai.ComplexStats
 		/// <summary>
 		/// The lowest possible value.
 		/// </summary>
-		public float Min { get; set; }
+		public float Min { get { return min; } set { min = value; } }
+		[SerializeField]
+		private float min;
 
 		/// <summary>
 		/// The highest possible value.
 		/// </summary>
-		public float Max { get; set; }
+		public float Max { get { return max; } set { max = value; } }
+		[SerializeField]
+		private float max;
 
 		public BoundedStat(Stat stat, float min, float max) : this (stat, min) { Max = max; }
 		public BoundedStat(Stat stat, float min) : this (stat) { Min = min; }
@@ -25,8 +30,8 @@ namespace Makhai.ComplexStats
 			Base = stat.Base;
 			Additive = stat.Additive;
 			Multiplier = stat.Multiplier;
-			Min = 0f;
-			Max = 0f;
+			Min = float.NegativeInfinity;
+			Max = float.PositiveInfinity;
 		}
 
 		/// <summary>

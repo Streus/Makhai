@@ -1,4 +1,5 @@
 ﻿using System;
+using UnityEngine;
 
 namespace Makhai.ComplexStats
 {
@@ -51,17 +52,23 @@ namespace Makhai.ComplexStats
 		/// <summary>
 		/// Starting value affected by Multiplier.
 		/// </summary>
-		public float Base { get; set; } 
+		public float Base { get { return baseValue; } set { baseValue = value; } }
+		[SerializeField]
+		private float baseValue;
 
 		/// <summary>
 		/// Added to the Base after the Multiplier is applied.
 		/// </summary>
-		public float Additive { get; set; }
+		public float Additive { get { return additiveValue; } set { additiveValue = value; } }
+		[SerializeField]
+		private float additiveValue;
 
 		/// <summary>
 		/// Applied to Base before Additive is added.
 		/// </summary>
-		public float Multiplier { get; set; }
+		public float Multiplier { get { return multiplicitiveValue; } set { multiplicitiveValue = value; } }
+		[SerializeField]
+		private float multiplicitiveValue;
 
 		public Stat() : this (0) { }
 		public Stat(float startingBase)

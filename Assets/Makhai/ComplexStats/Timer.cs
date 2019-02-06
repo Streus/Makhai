@@ -1,4 +1,5 @@
 ﻿using System;
+using UnityEngine;
 
 namespace Makhai.ComplexStats
 {
@@ -13,7 +14,9 @@ namespace Makhai.ComplexStats
 		/// <summary>
 		/// Starts at Max and counts down to 0.
 		/// </summary>
-		public float Value { get; private set; }
+		public float Value { get { return value; } private set { this.value = value; } }
+		[SerializeField]
+		private float value;
 
 		/// <summary>
 		/// Starts at 0 and counts up to Max.
@@ -23,9 +26,12 @@ namespace Makhai.ComplexStats
 		/// <summary>
 		/// The maximum timer value.
 		/// </summary>
-		public float Max { get; private set; }
+		public float Max { get { return max; } private set { max = value; } }
+		[SerializeField]
+		private float max;
 
 		// Halts updating of the value if true
+		[SerializeField]
 		private bool paused;
 
 		public float Percentage { get { return Value / Max; } }

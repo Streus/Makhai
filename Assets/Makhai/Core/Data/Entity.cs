@@ -1,11 +1,12 @@
 ﻿using Makhai.ComplexStats;
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Makhai.Core.Data
 {
 	[Serializable]
-    public class Entity : IEntityEventUser
+    public class Entity : MonoBehaviour, IEntityEventUser
     {
 		#region STATIC_VARS
 
@@ -13,8 +14,10 @@ namespace Makhai.Core.Data
 		#endregion
 
 		#region INSTANCE_VARS
+		[SerializeField]
 		private Dictionary<string, Status> statuses;
 
+		[NonSerialized]
 		private float combatTimer;
 		public bool InCombat
 		{
@@ -24,28 +27,60 @@ namespace Makhai.Core.Data
 			}
 		}
 
-		private Faction faction;
+		/// <summary>
+		/// Used to determine bullet hits/ignores.
+		/// </summary>
 		public Faction Affiliation { get { return faction; } }
+		[SerializeField]
+		private Faction faction;
 
 		#region STATS
 
-		public float Health { get; private set; } = 0f;
-		public BoundedStat HealthMax { get; set; } = new BoundedStat (new Stat (), 0f);
-		public Stat HealthRegen { get; set; } = new Stat ();
+		// Health
+		public float Health { get { return health; } private set { health = value; } }
+		[SerializeField]
+		private float health = 0f;
 
-		private int invincibleCount;
+		public BoundedStat HealthMax { get { return healthMax; } set { healthMax = value; } }
+		[SerializeField]
+		private BoundedStat healthMax = new BoundedStat(new Stat(), 0f);
+
+		public Stat HealthRegen { get { return healthRegen; } set { healthRegen = value; } } 
+		[SerializeField]
+		private Stat healthRegen = new Stat();
+
+		// Shield
+		public float Shield { get { return shield; } private set { shield = value; } }
+		[SerializeField]
+		private float shield = 0f;
+
+		public BoundedStat ShieldMax { get { return shieldMax; } set { shieldMax = value; } }
+		[SerializeField]
+		private BoundedStat shieldMax = new BoundedStat(new Stat(), 0f);
+
+		public Stat ShieldRegen { get { return shieldRegen; } set { shieldRegen = value; } }
+		[SerializeField]
+		private Stat shieldRegen = new Stat();
+
+		public float ShieldRegenDelay { get { return shieldRegenDelay; } set { shieldRegenDelay = value; } }
+		[SerializeField]
+		private float shieldRegenDelay = 0f;
+
+		public BoundedStat ShieldRegenDelayMax { get { return shieldRegenDelayMax; } set { shieldRegenDelayMax = value; } }
+		[SerializeField]
+		private BoundedStat shieldRegenDelayMax = new BoundedStat(new Stat(), 0f);
+
+		// Misc
 		public bool Invincible
 		{
 			get { return invincibleCount > 0; }
 		}
+		[SerializeField]
+		private int invincibleCount;
 
-		public BoundedStat Movespeed { get; set; } = new BoundedStat(new Stat(), 0f);
-
-		public float Shield { get; private set; } = 0f;
-		public BoundedStat ShieldMax { get; set; } = new BoundedStat (new Stat (), 0f);
-		public Stat ShieldRegen { get; set; } = new Stat ();
-		public float ShieldRegenDelay { get; set; } = 0f;
-		public BoundedStat ShieldRegenDelayMax { get; set; } = new BoundedStat (new Stat (), 0f);
+		public BoundedStat Movespeed { get { return movespeed; } set{ movespeed = value; } } 
+		[SerializeField]
+		private BoundedStat movespeed = new BoundedStat(new Stat(), 0f);
 		#endregion
 
 		#region EVENTS
@@ -75,6 +110,9 @@ namespace Makhai.Core.Data
 		/// <returns></returns>
 		public static CombatSnapshot DealDamage(Entity victim, Entity attacker, float damage, DamageFlags flags = DamageFlags.None)
 		{
+			if (victim == null)
+				throw new ArgumentNullException("Cannot deal damage to null victim");
+
 			CombatSnapshot.Builder snapshotBuilder = new CombatSnapshot.Builder ()
 			{
 				Victim = victim,
@@ -88,9 +126,6 @@ namespace Makhai.Core.Data
 				snapshotBuilder.VictimDied = false;
 				return snapshotBuilder.Build ();
 			}
-
-			if (victim == null)
-				throw new NullReferenceException ("Cannot deal damage to null victim");
 
 			victim.combatTimer = COMBAT_TIMER_MAX;
 			if (attacker != null)
@@ -156,6 +191,11 @@ namespace Makhai.Core.Data
 			Shield = ShieldMax.GetValue ();
 		}
 
+		private void Update()
+		{
+			OnUpdate(this, Time.deltaTime);
+		}
+
 		#region STATUS_HANDLING
 
 		public void AddStatus(Status s)
@@ -166,7 +206,7 @@ namespace Makhai.Core.Data
 			Status existing;
 			if (statuses.TryGetValue(s.Name, out existing))
 			{
-				existing.Stacks++;
+				existing.IncrementStackCount(this, 1);
 			}
 			else
 			{
@@ -186,8 +226,7 @@ namespace Makhai.Core.Data
 			if (name == null || name == "")
 				throw new ArgumentNullException ("Status name cannot be null or empty.");
 
-			Status status;
-			if (statuses.TryGetValue (name, out status))
+			if (statuses.TryGetValue (name, out Status status))
 			{
 				statuses.Remove (name);
 				statusRemoved?.Invoke (status);

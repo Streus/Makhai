@@ -5,14 +5,17 @@ namespace Makhai.Core.Data
 	[Serializable]
 	public class StatusComponent : IEntityEventUser
 	{
-		public int Stacks { get; set; }
-
 		public virtual void OnApply(Entity subject)
 		{
 
 		}
 
 		public virtual void OnRevert(Entity subject)
+		{
+
+		}
+
+		public void OnStacksChanged(Entity subject, int oldStacks, int newStacks)
 		{
 
 		}

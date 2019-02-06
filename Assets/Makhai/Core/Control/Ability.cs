@@ -16,25 +16,32 @@ namespace Makhai.Core.Control
 		/// <summary>
 		/// Unique identifier for this ability.
 		/// </summary>
-		public string Name { get; private set; }
+		public string Name { get { return name; } private set { name = value; } }
+		[SerializeField]
+		private string name;
 
 		/// <summary>
 		/// Ability is not usable if a cooldown is in progress.
 		/// </summary>
-		public Timer Cooldown { get; private set; }
+		public Timer Cooldown { get { return cooldown; } private set { cooldown = value; } }
+		[SerializeField]
+		private Timer cooldown;
 
 		/// <summary>
 		/// The number of times this ability can be used while a cooldown is in progress.
 		/// Is incremented by completing a cooldown.
 		/// </summary>
-		public int Charges { get; private set; }
+		public int Charges { get { return charges; } private set { charges = value; } }
+		[SerializeField]
+		private int charges;
 
 		/// <summary>
 		/// The maximum number of charges this ability can accrue.
 		/// </summary>
-		public int ChargesMax { get; protected set; }
+		public int ChargesMax { get { return chargesMax; } protected set { chargesMax = value; } }
+		[SerializeField]
+		private int chargesMax;
 
-		private int inactiveCount;
 		/// <summary>
 		/// Controls the update behavior of this ability. If false, update is ignored.
 		/// </summary>
@@ -43,8 +50,9 @@ namespace Makhai.Core.Control
 			get { return inactiveCount <= 0; }
 			set { inactiveCount += value ? -1 : 1; if (inactiveCount < 0) inactiveCount = 0; }
 		}
+		[SerializeField]
+		private int inactiveCount;
 
-		private int unavailableCount;
 		/// <summary>
 		/// Controls the invoke behavior of this ability. If false, use is ignored.
 		/// </summary>
@@ -53,6 +61,8 @@ namespace Makhai.Core.Control
 			get { return unavailableCount <= 0; }
 			set { unavailableCount += value ? -1 : 1; if (unavailableCount < 0) unavailableCount = 0; }
 		}
+		[SerializeField]
+		private int unavailableCount;
 
 		public bool InUse { get => useRoutine != null; }
 
@@ -83,7 +93,7 @@ namespace Makhai.Core.Control
 		/// </summary>
 		/// <param name="subject">The controller on which to operate</param>
 		/// <returns>Should invocation continue?</returns>
-		protected abstract bool InvokeStart(Controller subject);
+		protected virtual bool InvokeStart(Controller subject) { return true; }
 
 		/// <summary>
 		/// Main behavior loop of abilities that do not terminate in a single update (in InvokeStart).
