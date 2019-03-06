@@ -64,6 +64,10 @@ namespace Makhai.Core.Control
 		[SerializeField]
 		private int unavailableCount;
 
+		public IControlModule Control { get { return control; } set { control = value; } }
+		[SerializeField]
+		private IControlModule control;
+
 		public bool InUse { get => useRoutine != null; }
 
 		public event UseStartCallback startUse;
@@ -162,6 +166,7 @@ namespace Makhai.Core.Control
 				{
 					//use finished or duration completed
 					useRoutine = null;
+					InvokeEnd(subject);
 					OnUseEnd(subject);
 				}
 			}

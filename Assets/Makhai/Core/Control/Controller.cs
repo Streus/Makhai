@@ -30,7 +30,7 @@ namespace Makhai.Core.Control
 			}
 		}
 
-		private void Update()
+		protected virtual void Update()
 		{
 			self.OnUpdate (null, Time.deltaTime);
 			for(int i = 0; i < abilityList.Count; i++)
