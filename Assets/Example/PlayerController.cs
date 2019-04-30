@@ -17,18 +17,13 @@ namespace Example
 		protected override void Update()
 		{
 			base.Update();
-			if(Random.value < 0.5)
+			if(Random.value < 0.9)
 			{
 				abilityControl.Press();
 			}
 			else
 			{
 				abilityControl.Release();
-			}
-
-			if(abilityList[0].Control.GetControlStart())
-			{
-				UseAbility(0);
 			}
 		}
 	}

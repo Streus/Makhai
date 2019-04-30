@@ -59,7 +59,7 @@ namespace Makhai.Core.Control
 
 		public bool GetControlStart()
 		{
-			return state != lastState && state;
+			return (state != lastState) && state;
 		}
 
 		public bool GetControlContinue()
@@ -69,7 +69,7 @@ namespace Makhai.Core.Control
 
 		public bool GetControlEnd()
 		{
-			return state != lastState && !state;
+			return (state != lastState) && !state;
 		}
 	}
 }
